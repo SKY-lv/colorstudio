@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ColorStudio - 颜色设计工具</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f0f1a;color:#e2e8f0;min-height:100vh;}
+.app{display:flex;flex-direction:column;min-height:100vh;}
+.header{padding:16px 20px;background:#1e1e2e;border-bottom:1px solid #2d2d44;}
+.header h1{font-size:1.3em;} .header h1 span{color:#ec4899;}
+.main{flex:1;display:grid;grid-template-columns:320px 1fr 280px;gap:0;overflow:hidden;}
+.panel{background:#0f0f1a;border-right:1px solid #2d2d44;display:flex;flex-direction:column;}
+.panel:last-child{border-right:none;border-left:1px solid #2d2d44;}
+.panel-header{padding:12px 16px;background:#1e1e2e;border-bottom:1px solid #2d2d44;font-size:13px;font-weight:600;}
+.panel-content{flex:1;overflow-y:auto;padding:12px;}
+.color-picker-area{padding:20px;text-align:center;}
+.color-wheel{width:240px;height:240px;border-radius:50%;margin:0 auto 20px;background:conic-gradient(red, yellow, lime, aqua, blue, magenta, red);position:relative;cursor:crosshair;}
+.color-preview{width:200px;height:80px;border-radius:12px;margin:0 auto 16px;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+.color-inputs{text-align:left;max-width:200px;margin:0 auto;}
+.input-row{display:flex;align-items:center;gap:8px;margin:8px 0;}
+.input-row label{min-width:30px;font-size:12px;color:#8b949e;}
+.input-row input{flex:1;background:#1e1e2e;border:1px solid #2d2d44;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:13px;font-family:'Courier New',monospace;}
+.input-row input:focus{outline:none;border-color:#ec4899;}
+.formats{background:#1e1e2e;border-radius:8px;padding:12px;margin-top:16px;}
+.format-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;}
+.format-item .label{color:#8b949e;}
+.format-item .value{font-family:'Courier New',monospace;color:#e2e8f0;}
+.copy-btn{background:none;border:none;color:#ec4899;cursor:pointer;font-size:14px;margin-left:8px;}
+.copy-btn:hover{color:#f472b6;}
+.palette-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.palette-item{height:60px;border-radius:8px;cursor:pointer;position:relative;transition:transform 0.2s;}
+.palette-item:hover{transform:scale(1.05);}
+.palette-item .hex{position:absolute;bottom:4px;left:8px;font-size:10px;color:rgba(255,255,255,0.8);text-shadow:0 1px 2px rgba(0,0,0,0.5);}
+.harmony-section{margin-top:16px;}
+.harmony-title{font-size:11px;color:#8b949e;margin-bottom:8px;}
+.harmony-colors{display:flex;gap:4px;}
+.harmony-color{flex:1;height:40px;border-radius:6px;cursor:pointer;transition:transform 0.2s;}
+.harmony-color:hover{transform:scale(1.1);}
+.gradient-section{margin-top:16px;}
+.gradient-preview{height:60px;border-radius:8px;margin-bottom:8px;}
+.gradient-stops{display:flex;gap:8px;}
+.gradient-stop{flex:1;height:30px;border-radius:6px;}
+.tools{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;}
+.tool-btn{padding:10px;background:#1e1e2e;border:1px solid #2d2d44;border-radius:8px;cursor:pointer;font-size:12px;text-align:center;transition:all 0.2s;}
+.tool-btn:hover{border-color:#ec4899;}
+.tool-btn .icon{font-size:1.5em;margin-bottom:4px;}
+.contrast-checker{background:#1e1e2e;border-radius:8px;padding:12px;margin-top:16px;}
+.contrast-result{font-size:24px;font-weight:600;text-align:center;margin:8px 0;}
+.contrast-badge{padding:4px 12px;border-radius:20px;font-size:11px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header"><h1>Color<span>Studio</span></h1></div>
+  <div class="main">
+    <div class="panel">
+      <div class="panel-header">颜色选择</div>
+      <div class="panel-content">
+        <div class="color-picker-area">
+          <div class="color-wheel" id="color-wheel" onclick="pickColor(event)"></div>
+          <div class="color-preview" id="color-preview" style="background:#ec4899"></div>
+          <div class="color-inputs">
+            <div class="input-row">
+              <label>HEX</label>
+              <input type="text" id="hex-input" value="#ec4899" oninput="fromHex()">
+            </div>
+            <div class="input-row">
+              <label>R</label>
+              <input type="number" id="r-input" value="236" min="0" max="255" oninput="fromRGB()">
+            </div>
+            <div class="input-row">
+              <label>G</label>
+              <input type="number" id="g-input" value="72" min="0" max="255" oninput="fromRGB()">
+            </div>
+            <div class="input-row">
+              <label>B</label>
+              <input type="number" id="b-input" value="153" min="0" max="255" oninput="fromRGB()">
+            </div>
+          </div>
+        </div>
+        
+        <div class="formats">
+          <div class="format-item">
+            <span class="label">RGB</span>
+            <span class="value" id="rgb-val">rgb(236, 72, 153)</span>
+            <button class="copy-btn" onclick="copy('rgb')">📋</button>
+          </div>
+          <div class="format-item">
+            <span class="label">HSL</span>
+            <span class="value" id="hsl-val">hsl(330, 80%, 60%)</span>
+            <button class="copy-btn" onclick="copy('hsl')">📋</button>
+          </div>
+          <div class="format-item">
+            <span class="label">RGBA</span>
+            <span class="value" id="rgba-val">rgba(236, 72, 153, 1)</span>
+            <button class="copy-btn" onclick="copy('rgba')">📋</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <div class="panel-header">调色板</div>
+      <div class="panel-content">
+        <div class="palette-grid" id="palette-grid"></div>
+        
+        <div class="harmony-section">
+          <div class="harmony-title">互补色</div>
+          <div class="harmony-colors" id="complementary"></div>
+        </div>
+        
+        <div class="harmony-section">
+          <div class="harmony-title">类似色</div>
+          <div class="harmony-colors" id="analogous"></div>
+        </div>
+        
+        <div class="harmony-section">
+          <div class="harmony-title">三等分</div>
+          <div class="harmony-colors" id="triadic"></div>
+        </div>
+        
+        <div class="gradient-section">
+          <div class="harmony-title">渐变</div>
+          <div class="gradient-preview" id="gradient-preview"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <div class="panel-header">工具</div>
+      <div class="panel-content">
+        <div class="tools">
+          <div class="tool-btn" onclick="randomColor()">
+            <div class="icon">🎲</div>
+            <div>随机颜色</div>
+          </div>
+          <div class="tool-btn" onclick="lighten()">
+            <div class="icon">☀️</div>
+            <div>变亮</div>
+          </div>
+          <div class="tool-btn" onclick="darken()">
+            <div class="icon">🌙</div>
+            <div>变暗</div>
+          </div>
+          <div class="tool-btn" onclick="invert()">
+            <div class="icon">🔄</div>
+            <div>反色</div>
+          </div>
+        </div>
+        
+        <div class="contrast-checker">
+          <div class="harmony-title">对比度检查</div>
+          <div style="display:flex;gap:8px;margin:8px 0">
+            <input type="text" id="contrast-bg" value="#ffffff" style="flex:1;background:#0f0f1a;border:1px solid #2d2d44;border-radius:4px;color:#e2e8f0;padding:6px 8px;font-size:12px" oninput="checkContrast()">
+          </div>
+          <div class="contrast-result" id="contrast-ratio">4.52</div>
+          <div class="contrast-badge" id="contrast-badge" style="background:#10b981">AA 通过</div>
+        </div>
+        
+        <div style="margin-top:16px">
+          <div class="harmony-title">最近使用</div>
+          <div class="harmony-colors" id="recent-colors"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentColor = { r: 236, g: 72, b: 153 };
+let recentColors = [];
+
+function updateColor() {
+  const { r, g, b } = currentColor;
+  const hex = rgbToHex(r, g, b);
+  const hsl = rgbToHsl(r, g, b);
+  
+  document.getElementById('color-preview').style.background = hex;
+  document.getElementById('hex-input').value = hex;
+  document.getElementById('r-input').value = r;
+  document.getElementById('g-input').value = g;
+  document.getElementById('b-input').value = b;
+  
+  document.getElementById('rgb-val').textContent = `rgb(${r}, ${g}, ${b})`;
+  document.getElementById('hsl-val').textContent = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+  document.getElementById('rgba-val').textContent = `rgba(${r}, ${g}, ${b}, 1)`;
+  
+  updateHarmony();
+  updatePalette();
+  checkContrast();
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+function fromHex() {
+  const hex = document.getElementById('hex-input').value;
+  const rgb = hexToRgb(hex);
+  if (rgb) {
+    currentColor = rgb;
+    updateColor();
+  }
+}
+
+function fromRGB() {
+  currentColor = {
+    r: parseInt(document.getElementById('r-input').value) || 0,
+    g: parseInt(document.getElementById('g-input').value) || 0,
+    b: parseInt(document.getElementById('b-input').value) || 0
+  };
+  updateColor();
+}
+
+function pickColor(e) {
+  const wheel = document.getElementById('color-wheel');
+  const rect = wheel.getBoundingClientRect();
+  const x = e.clientX - rect.left - rect.width / 2;
+  const y = e.clientY - rect.top - rect.height / 2;
+  const angle = Math.atan2(y, x) * 180 / Math.PI + 180;
+  const dist = Math.min(Math.sqrt(x*x + y*y), rect.width / 2);
+  const lightness = 50 + (rect.width / 2 - dist) / rect.width * 50;
+  
+  const rgb = hslToRgb(angle, 80, lightness);
+  currentColor = rgb;
+  updateColor();
+  addRecent(rgbToHex(rgb.r, rgb.g, rgb.b));
+}
+
+function updateHarmony() {
+  const hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
+  
+  // Complementary
+  const comp = hslToRgb((hsl.h + 180) % 360, hsl.s, hsl.l);
+  document.getElementById('complementary').innerHTML = `
+    <div class="harmony-color" style="background:${rgbToHex(currentColor.r, currentColor.g, currentColor.b)}" onclick="setColor(${currentColor.r},${currentColor.g},${currentColor.b})"></div>
+    <div class="harmony-color" style="background:${rgbToHex(comp.r, comp.g, comp.b)}" onclick="setColor(${comp.r},${comp.g},${comp.b})"></div>
+  `;
+  
+  // Analogous
+  const an1 = hslToRgb((hsl.h - 30 + 360) % 360, hsl.s, hsl.l);
+  const an2 = hslToRgb((hsl.h + 30) % 360, hsl.s, hsl.l);
+  document.getElementById('analogous').innerHTML = `
+    <div class="harmony-color" style="background:${rgbToHex(an1.r, an1.g, an1.b)}" onclick="setColor(${an1.r},${an1.g},${an1.b})"></div>
+    <div class="harmony-color" style="background:${rgbToHex(currentColor.r, currentColor.g, currentColor.b)}" onclick="setColor(${currentColor.r},${currentColor.g},${currentColor.b})"></div>
+    <div class="harmony-color" style="background:${rgbToHex(an2.r, an2.g, an2.b)}" onclick="setColor(${an2.r},${an2.g},${an2.b})"></div>
+  `;
+  
+  // Triadic
+  const tr1 = hslToRgb((hsl.h + 120) % 360, hsl.s, hsl.l);
+  const tr2 = hslToRgb((hsl.h + 240) % 360, hsl.s, hsl.l);
+  document.getElementById('triadic').innerHTML = `
+    <div class="harmony-color" style="background:${rgbToHex(currentColor.r, currentColor.g, currentColor.b)}" onclick="setColor(${currentColor.r},${currentColor.g},${currentColor.b})"></div>
+    <div class="harmony-color" style="background:${rgbToHex(tr1.r, tr1.g, tr1.b)}" onclick="setColor(${tr1.r},${tr1.g},${tr1.b})"></div>
+    <div class="harmony-color" style="background:${rgbToHex(tr2.r, tr2.g, tr2.b)}" onclick="setColor(${tr2.r},${tr2.g},${tr2.b})"></div>
+  `;
+  
+  // Gradient
+  const grad = `linear-gradient(90deg, ${rgbToHex(currentColor.r, currentColor.g, currentColor.b)}, ${rgbToHex(comp.r, comp.g, comp.b)})`;
+  document.getElementById('gradient-preview').style.background = grad;
+}
+
+function updatePalette() {
+  const palette = [];
+  for (let i = 0; i < 8; i++) {
+    const h = Math.random() * 360;
+    const s = 60 + Math.random() * 40;
+    const l = 30 + Math.random() * 40;
+    const rgb = hslToRgb(h, s, l);
+    palette.push(rgbToHex(rgb.r, rgb.g, rgb.b));
+  }
+  
+  document.getElementById('palette-grid').innerHTML = palette.map(hex => `
+    <div class="palette-item" style="background:${hex}" onclick="setHex('${hex}')">
+      <span class="hex">${hex}</span>
+    </div>
+  `).join('');
+}
+
+function setColor(r, g, b) {
+  currentColor = { r, g, b };
+  updateColor();
+  addRecent(rgbToHex(r, g, b));
+}
+
+function setHex(hex) {
+  const rgb = hexToRgb(hex);
+  if (rgb) {
+    currentColor = rgb;
+    updateColor();
+    addRecent(hex);
+  }
+}
+
+function randomColor() {
+  currentColor = {
+    r: Math.floor(Math.random() * 256),
+    g: Math.floor(Math.random() * 256),
+    b: Math.floor(Math.random() * 256)
+  };
+  updateColor();
+  addRecent(rgbToHex(currentColor.r, currentColor.g, currentColor.b));
+}
+
+function lighten() {
+  const hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
+  const rgb = hslToRgb(hsl.h, hsl.s, Math.min(hsl.l + 10, 100));
+  currentColor = rgb;
+  updateColor();
+}
+
+function darken() {
+  const hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
+  const rgb = hslToRgb(hsl.h, hsl.s, Math.max(hsl.l - 10, 0));
+  currentColor = rgb;
+  updateColor();
+}
+
+function invert() {
+  currentColor = {
+    r: 255 - currentColor.r,
+    g: 255 - currentColor.g,
+    b: 255 - currentColor.b
+  };
+  updateColor();
+}
+
+function checkContrast() {
+  const bg = document.getElementById('contrast-bg').value;
+  const bgRgb = hexToRgb(bg);
+  if (!bgRgb) return;
+  
+  const { r, g, b } = currentColor;
+  const lum1 = 0.299 * r + 0.587 * g + 0.114 * b;
+  const lum2 = 0.299 * bgRgb.r + 0.587 * bgRgb.g + 0.114 * bgRgb.b;
+  const ratio = (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
+  
+  document.getElementById('contrast-ratio').textContent = ratio.toFixed(2);
+  
+  const badge = document.getElementById('contrast-badge');
+  if (ratio >= 7) {
+    badge.textContent = 'AAA 通过';
+    badge.style.background = '#10b981';
+  } else if (ratio >= 4.5) {
+    badge.textContent = 'AA 通过';
+    badge.style.background = '#10b981';
+  } else if (ratio >= 3) {
+    badge.textContent = 'AA Large';
+    badge.style.background = '#f59e0b';
+  } else {
+    badge.textContent = '不通过';
+    badge.style.background = '#ef4444';
+  }
+}
+
+function addRecent(hex) {
+  if (!recentColors.includes(hex)) {
+    recentColors.unshift(hex);
+    if (recentColors.length > 8) recentColors.pop();
+    document.getElementById('recent-colors').innerHTML = recentColors.map(h => 
+      `<div class="harmony-color" style="background:${h}" onclick="setHex('${h}')"></div>`
+    ).join('');
+  }
+}
+
+function copy(format) {
+  const val = document.getElementById(format + '-val')?.textContent || document.getElementById(format + 'val')?.textContent;
+  if (val) navigator.clipboard.writeText(val);
+}
+
+updateColor();
+</script>
+</body>
+</html>
